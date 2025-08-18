@@ -1,0 +1,75 @@
+i18n/locales/fr.json
+
+{
+"common": {
+"cancel": "Annuler",
+"confirm": "Confirmer",
+"edit": "Modifier",
+"save": "Enregistrer",
+"delete": "Supprimer",
+"yes": "Oui",
+"no": "Non",
+"back": "Retour",
+"next": "Suivant"
+},
+"auth": {
+"login": "Connexion",
+"signup": "Créer un compte",
+"email": "Adresse e-mail",
+"password": "Mot de passe",
+"forgotPassword": "Mot de passe oublié ?",
+"submit": "Se connecter",
+"logout": "Déconnexion",
+"or": "ou",
+"loginWithGoogle": "Se connecter avec Google"
+},
+"profile": {
+"title": "Mon profil",
+"name": "Nom",
+"email": "E-mail",
+"phone": "Téléphone",
+"bio": "Bio",
+"editProfile": "Modifier mon profil",
+"changeAvatar": "Changer l'avatar",
+"language": "Langue",
+"settings": "Paramètres",
+"security": "Sécurité"
+},
+"home": {
+"welcome": "Bienvenue",
+"searchPlaceholder": "Rechercher un événement...",
+"popularEvents": "Événements populaires",
+"noEvents": "Aucun événement trouvé."
+},
+"events": {
+"event": "Événement",
+"date": "Date",
+"location": "Lieu",
+"price": "Prix",
+"free": "Gratuit",
+"participants": "Participants",
+"participate": "Participer",
+"cancelParticipation": "Annuler la participation"
+},
+"settings": {
+"title": "Paramètres",
+"language": "Langue",
+"changeLanguage": "Changer de langue",
+"theme": "Thème",
+"darkMode": "Mode sombre",
+"lightMode": "Mode clair"
+},
+"chat": {
+"messages": "Messages",
+"writeMessage": "Écrire un message...",
+"send": "Envoyer"
+},
+"errors": {
+"network": "Erreur réseau. Veuillez réessayer.",
+"unknown": "Une erreur est survenue.",
+"required": "Ce champ est requis.",
+"invalidEmail": "Adresse e-mail invalide",
+"passwordTooShort": "Le mot de passe est trop court"
+}
+}
+

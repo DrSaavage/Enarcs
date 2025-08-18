@@ -1,0 +1,36 @@
+// i18n/locales/en.json
+{
+"profile": {
+"title": "My Profile",
+"edit": "Edit",
+"name": "Name",
+"email": "Email",
+"phone": "Phone",
+"bio": "Bio"
+},
+"login": {
+"title": "Login",
+"email": "Email",
+"password": "Password",
+"submit": "Log In"
+}
+}
+
+// i18n/locales/fr.json
+{
+"profile": {
+"title": "Mon profil",
+"edit": "Modifier",
+"name": "Nom",
+"email": "Email",
+"phone": "Téléphone",
+"bio": "Bio"
+},
+"login": {
+"title": "Connexion",
+"email": "Email",
+"password": "Mot de passe",
+"submit": "Se connecter"
+}
+}
+

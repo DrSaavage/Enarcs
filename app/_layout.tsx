@@ -1,63 +1,45 @@
-import '@/i18n';
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+// app/_layout.tsx
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import "react-native-gesture-handler";
-import 'react-native-reanimated';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useAuthListener } from '@/lib/authListener';
-import { colors, fontSizes, gradientColors, gradientConfig, radius, spacing, ThemeContext } from '@/theme';
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const router = useRouter();
   const [loaded] = useFonts({
-    Inter: require('../assets/fonts/Inter-Regular.ttf'),
-    'Inter-Bold': require('../assets/fonts/Inter-Bold.ttf'),
+    Inter: require('@/assets/fonts/Inter-Regular.ttf'),
+    'Inter-Bold': require('@/assets/fonts/Inter-Bold.ttf'),
+    'Inter-Light': require('@/assets/fonts/Inter-Light.ttf'),
+    SpaceMono: require('@/assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const user = useAuthListener();
-
   useEffect(() => {
-    if (user === undefined) return;
-    if (user) router.replace('/home');
-    else router.replace('/auth/login');
-  }, [user]);
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
 
-  if (!loaded || user === undefined) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  if (!loaded) {
+    return null;
   }
 
   return (
-    <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ThemeContext.Provider
-        value={{
-          colors,
-          spacing,
-          fontSizes,
-          radius,
-          gradientColors,
-          gradientConfig,
-        }}
-      >
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="messages" options={{ headerShown: false }} />
-          <Stack.Screen name="profile" options={{ headerShown: false }} />
-          <Stack.Screen name="home" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeContext.Provider>
-    </NavigationThemeProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="messages" />
+        <Stack.Screen name="profile" />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

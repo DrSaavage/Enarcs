@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 
-export default function Settings() {
+export default function settings() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
 
@@ -38,7 +38,7 @@ export default function Settings() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={26} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('settings.title') || 'Paramètres'}</Text>
+          <Text style={styles.headerTitle}>{t('settings') || 'Paramètres'}</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>

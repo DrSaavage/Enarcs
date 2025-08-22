@@ -1,13 +1,14 @@
-// /theme/index.ts
+// Path: theme/index.ts
 import { createContext, useContext } from 'react';
 import { ColorValue } from 'react-native';
+
 const tintColorLight = '#fff';
 const tintColorDark = '#fff';
 
 export const colors = {
   light: {
     background: '#121212',
-    card: '#1E1E1E',
+    card: '#1C1C1E', // 🔹 un peu plus foncé que #1E1E1E
     text: '#FFFFFF',
     muted: '#A1A1A1',
     primary: '#F25C5C',
@@ -19,12 +20,12 @@ export const colors = {
     playButton: '#000000AA',
     tint: tintColorLight,
     icon: '#5C5C5C',
-    tabIconDefault: '#A0A0A0',
+    tabIconDefault: '#8A8A8A', // 🔹 foncé que A0A0A0
     tabIconSelected: tintColorLight,
   },
   dark: {
     background: '#121212',
-    card: '#1E1E1E',
+    card: '#1C1C1E',
     text: '#FFFFFF',
     muted: '#A1A1A1',
     primary: '#F25C5C',
@@ -36,7 +37,7 @@ export const colors = {
     playButton: '#000000AA',
     tint: tintColorDark,
     icon: '#5C5C5C',
-    tabIconDefault: '#A0A0A0',
+    tabIconDefault: '#8A8A8A',
     tabIconSelected: tintColorDark,
   },
 };

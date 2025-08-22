@@ -1,9 +1,7 @@
+// app/index.tsx
 import { Redirect } from 'expo-router';
-import { useEffect } from 'react';
 
 export default function Index() {
-  useEffect(() => {
-  }, []);
-
-  return <Redirect href="/auth" />;
+  // Redirige vers le feed au lancement
+  return <Redirect href="/(tabs)/feed" />;
 }

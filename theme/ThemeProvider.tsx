@@ -1,3 +1,4 @@
+// Path: theme/ThemeProvider.tsx
 import { ThemeContext, colors, fontSizes, gradientColors, gradientConfig, radius, spacing } from "@/theme";
 import React from "react";
 

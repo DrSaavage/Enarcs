@@ -18,7 +18,7 @@ export default function LoginScreen() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/home');
+      router.replace('/feed');
     } catch (error: any) {
       Alert.alert('Erreur', error.message);
     }

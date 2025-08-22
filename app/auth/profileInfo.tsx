@@ -4,7 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const FEED_ROUTE = '/(tabs)/feed';
 
 export default function ProfileInfo() {
   const router = useRouter();
@@ -13,19 +15,21 @@ export default function ProfileInfo() {
   const [bio, setBio] = useState('');
 
   async function handleSaveProfile() {
-    if (!civility || !age || !bio) {
+    if (!civility.trim() || !age.trim() || !bio.trim()) {
       Alert.alert('Erreur', 'Remplis tous les champs');
       return;
     }
     try {
       const uid = auth.currentUser?.uid;
-      if (!uid) throw new Error("User non connecté");
-      await setDoc(doc(firestore, "users", uid), {
-        civility, age: Number(age), bio
-      }, { merge: true });
-      router.replace('/home');
-    } catch (e) {
-      Alert.alert('Erreur', 'Impossible d\'enregistrer');
+      if (!uid) throw new Error('Utilisateur non connecté');
+      await setDoc(
+        doc(firestore, 'users', uid),
+        { civility: civility.trim(), age: Number(age), bio: bio.trim() },
+        { merge: true }
+      );
+      router.replace(FEED_ROUTE);
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message ?? "Impossible d'enregistrer");
     }
   }
 
@@ -64,59 +68,14 @@ export default function ProfileInfo() {
   );
 }
 
-const styles = {
-//const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    position: 'relative', // important pour position absolute du back
-  },
-  backButton: {
-    position: 'absolute',
-    top: 70, // ajuster selon safe area ou status bar, peut être plus petit selon device
-    left: 20,
-    zIndex: 10,
-  },
-  backArrow: {
-    fontSize: 28,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  content: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 40,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#222',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
-    color: 'white',
-  },
-  button: {
-    backgroundColor: 'white',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  link: {
-    color: 'white',
-    marginTop: 10,
-    textDecorationLine: 'underline',
-  },
-};
-
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, position: 'relative' },
+  backButton: { position: 'absolute', top: 70, left: 20, zIndex: 10 },
+  backArrow: { fontSize: 28, color: 'white', fontWeight: 'bold' },
+  content: { alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginBottom: 40 },
+  input: { width: '100%', backgroundColor: '#222', padding: 14, borderRadius: 8, marginBottom: 16, color: 'white' },
+  button: { backgroundColor: 'white', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, marginBottom: 20 },
+  buttonText: { color: 'black', fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  link: { color: 'white', marginTop: 10, textDecorationLine: 'underline' },
+});

@@ -21,7 +21,7 @@ import {
   View
 } from 'react-native';
 
-export default function Security() {
+export default function security() {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [currentPwd, setCurrentPwd] = useState('');

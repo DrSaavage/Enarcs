@@ -1,7 +1,8 @@
+//app/auth/login.tsx
 import { auth } from '@/lib/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -24,6 +25,15 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleGuest() {
+    try {
+      await signInAnonymously(auth);
+      router.replace('/feed'); // continue en invité sur le feed
+    } catch (e: any) {
+      Alert.alert('Invité indisponible', e.message || 'Impossible de se connecter en invité.');
+    }
+  }
+
   return (
     <LinearGradient
       colors={['#000000', '#1C1C1C', 'rgba(90, 26, 26, 0.6)']}
@@ -42,6 +52,7 @@ export default function LoginScreen() {
 
       <View style={styles.content}>
         <Text style={styles.title}>Connexion</Text>
+
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -59,6 +70,7 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
         />
+
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Se connecter</Text>
         </TouchableOpacity>
@@ -66,6 +78,11 @@ export default function LoginScreen() {
         <TouchableOpacity onPress={() => router.push('/auth/signup')}>
           <Text style={styles.link}>Pas encore de compte ? S’inscrire</Text>
         </TouchableOpacity>
+
+        {/* Lien invité */}
+        <Text style={styles.guestText} onPress={handleGuest}>
+          Continuer en invité
+        </Text>
       </View>
     </LinearGradient>
   );
@@ -76,11 +93,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 20,
-    position: 'relative', // important pour position absolute du back
+    position: 'relative',
   },
   backButton: {
     position: 'absolute',
-    top: 70, // ajuster selon safe area ou status bar
+    top: 70,
     left: 20,
     zIndex: 10,
   },
@@ -122,6 +139,11 @@ const styles = StyleSheet.create({
   link: {
     color: 'white',
     marginTop: 10,
+    textDecorationLine: 'underline',
+  },
+  guestText: {
+    marginTop: 16,
+    color: '#D1D5DB',
     textDecorationLine: 'underline',
   },
 });

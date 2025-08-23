@@ -1,63 +1,49 @@
-// Path: app/(tabs)/profile/profileMain.tsx
+// app/(tabs)/profileMain.tsx
 import { auth, firestore } from "@/lib/firebase";
 import PageContainer from "@/theme/PageContainer";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
-import { onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
-import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 
-export default function profileMain() {
+export default function ProfileMain() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const sections = [
-    { label: "Mes informations", icon: "person-outline", route: "/profile/PersonalInfo" },
+    { label: "Mes informations", icon: "person-outline", route: "/profile/personalInfo" },
     { label: "Paramètres", icon: "settings-outline", route: "/profile/settings" },
     { label: "Sécurité", icon: "lock-closed-outline", route: "/profile/security" },
     { label: "Déconnexion", icon: "exit-outline", route: "/profile/logoutButton", danger: true },
   ];
 
-  // 🔹 Détection auth en temps réel
+  // 🔹 Surveille l'état auth
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+      if (!u || u.isAnonymous) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       try {
-        if (u && !u.isAnonymous) {
-          const ref = doc(firestore, "users", u.uid);
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            setUser({ uid: u.uid, ...snap.data() });
-          } else {
-            setUser({ uid: u.uid, email: u.email, displayName: u.displayName });
-          }
-        } else {
-          setUser(null);
-        }
+        const ref = doc(firestore, "users", u.uid);
+        const snap = await getDoc(ref);
+        setUser(
+          snap.exists()
+            ? { uid: u.uid, ...snap.data() }
+            : { uid: u.uid, email: u.email, displayName: u.displayName }
+        );
       } catch (e) {
-        console.error("Error fetching profile:", e);
+        console.error("Error fetching user:", e);
         setUser(null);
       } finally {
         setLoading(false);
       }
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
-
-  // 🔹 Protection focus: redirige si déconnecté ou invité
-  useFocusEffect(
-    useCallback(() => {
-      if (!auth.currentUser || auth.currentUser.isAnonymous) {
-        router.replace("/auth/login");
-      }
-    }, [])
-  );
-
-  const handleSectionPress = (section: any) => {
-    router.push(section.route);
-  };
 
   if (loading) {
     return (
@@ -67,28 +53,40 @@ export default function profileMain() {
     );
   }
 
+  // 🔹 Si pas connecté(e) → message + boutons
   if (!user) {
     return (
       <PageContainer title="Mon profil" showBackButton={false}>
-        <ScrollView contentContainerStyle={[styles.scroll, { justifyContent: "center", alignItems: "center" }]}>
-          <Text style={{ color: "#fff", opacity: 0.8, marginBottom: 20 }}>
-            Aucun utilisateur connecté.
+        <ScrollView contentContainerStyle={styles.center}>
+          <Text style={{ color: "#fff", marginBottom: 20 }}>
+            Vous n'êtes pas connecté(e).
           </Text>
 
-          <TouchableOpacity style={styles.authButton} onPress={() => router.replace("/auth/login")}>
+          <TouchableOpacity
+            style={styles.authButton}
+            onPress={() => router.replace("/auth/login")}
+          >
             <Text style={styles.authButtonText}>Se connecter</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.authButton, { backgroundColor: "transparent", borderWidth: 1, borderColor: "#fff" }]}
+            style={[
+              styles.authButton,
+              { backgroundColor: "transparent", borderWidth: 1, borderColor: "#fff" },
+            ]}
             onPress={() => router.replace("/auth/signup")}
           >
-            <Text style={[styles.authButtonText, { color: "#fff" }]}>Créer un compte</Text>
+            <Text style={[styles.authButtonText, { color: "#fff" }]}>
+              Créer un compte
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </PageContainer>
     );
   }
+
+  // 🔹 Utilisateur connecté → sections
+  const handleSectionPress = (section: any) => router.push(section.route);
 
   return (
     <PageContainer title="Mon profil" showBackButton={false}>
@@ -105,7 +103,12 @@ export default function profileMain() {
               color={section.danger ? "red" : "#fff"}
               style={styles.icon}
             />
-            <Text style={[styles.label, section.danger && { color: "red", fontWeight: "600" }]}>
+            <Text
+              style={[
+                styles.label,
+                section.danger && { color: "red", fontWeight: "600" },
+              ]}
+            >
               {section.label}
             </Text>
             <Ionicons
@@ -122,6 +125,7 @@ export default function profileMain() {
 
 const styles = StyleSheet.create({
   scroll: { padding: 20 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 },
   section: {
     flexDirection: "row",
     alignItems: "center",

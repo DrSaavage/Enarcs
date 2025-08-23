@@ -1,4 +1,4 @@
-// app/(tabs)/profile/PersonalInfo.tsx
+// app/(tabs)/profile/personalInfo.tsx
 import { auth, firestore } from '@/lib/firebase';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,7 +23,7 @@ import {
 // Optional uploader (won't crash if missing)
 import * as Upload from '@/lib/uploadAvatar';
 
-export default function PersonalInfo() {
+export default function personalInfo() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

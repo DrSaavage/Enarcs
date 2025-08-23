@@ -13,7 +13,10 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: '#888',
         tabBarStyle: {
           borderTopWidth: 0,
-          backgroundColor: 'transparent',
+          backgroundColor: '#1c1c1c', // nouvelle couleur
+          height: 90, // hauteur réduite
+          paddingBottom: 5,
+          paddingTop: 5,
         },
       }}
     >
@@ -47,7 +50,7 @@ export default function TabsLayout() {
         }}
       />
 
-    
+
 
       <Tabs.Screen
         name="messagesList"

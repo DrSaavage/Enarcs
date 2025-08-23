@@ -1,7 +1,7 @@
-// app/index.tsx
-import { Redirect } from 'expo-router';
+// Path: app/index.tsx
+import { Redirect } from "expo-router";
 
 export default function Index() {
-  // Redirige vers le feed au lancement
+  // 👉 Toujours rediriger vers le feed au lancement (accessible à tous)
   return <Redirect href="/(tabs)/feed" />;
 }

@@ -60,5 +60,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: "bold",
     // fontSize est maintenant contrôlé par fontSizes.xxl
+    marginTop: 8,
   },
 });

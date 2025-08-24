@@ -1,5 +1,5 @@
 // Path: app/(tabs)/profile/logoutButton.tsx
-import ShotgunButton from "@/components/ShotgunButton";
+import ShotgunButton from "@/components/ui/ShotgunButton";
 import { auth } from "@/lib/firebase";
 import { gradientColors, gradientConfig } from "@/theme";
 import { LinearGradient } from "expo-linear-gradient";

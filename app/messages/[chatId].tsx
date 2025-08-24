@@ -1,9 +1,10 @@
-// 📄 app/(tabs)/messages/[chatId].tsx
+// app/messages/[chatId].tsx
 
+import MessageBubble from "@/components/messages/MessageBubble";
 import { auth, firestore } from "@/lib/firebase";
 import { gradientColors, gradientConfig } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -34,74 +35,89 @@ import {
   View,
 } from "react-native";
 
-// MessageBubble : gère le style system msg
-function MessageBubble({ text, isMine = false, time, senderName }) {
-  return (
-    <View style={[
-      styles.bubble,
-      isMine ? styles.bubbleMine : styles.bubbleOther
-    ]}>
-      {senderName === "Système" &&
-        <Text style={{ color: '#ccc', fontSize: 12, marginBottom: 2 }}>{senderName}</Text>
-      }
-      <Text style={styles.bubbleText}>{text}</Text>
-      {time && <Text style={styles.bubbleTime}>{time}</Text>}
-    </View>
-  );
-}
+type ChatDoc = {
+  id: string;
+  participants: string[];
+  postId?: string;
+  type: "text" | "audio" | "video" | "gift";
+  accessGranted?: boolean;
+  createdAt?: { seconds: number };
+  updatedAt?: { seconds: number };
+  // champs d'aperçu pratique
+  lastMessage?: string;
+  lastMessageTime?: { seconds: number };
+  // visuels optionnels si tu les utilises
+  eventTitle?: string;
+  eventImageUrl?: string;
+};
+
+type MessageDoc = {
+  id: string;
+  senderId: string;
+  content: string;
+  type: "text" | "image" | "video" | "gift";
+  createdAt?: { seconds: number };
+  senderName?: string;
+};
 
 export default function ChatDetailScreen() {
-  const { chatId } = useLocalSearchParams();
+  const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const router = useRouter();
   const navigation = useNavigation();
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<MessageDoc[]>([]);
   const [input, setInput] = useState("");
-  const [chatInfo, setChatInfo] = useState(null);
-  const flatListRef = useRef(null);
+  const [chatInfo, setChatInfo] = useState<ChatDoc | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
-  // Util function: met à zéro les non lus pour ce chat et cet user
+  // Marquer comme lu pour l'utilisateur courant
   const resetUnread = useCallback(() => {
     if (!chatId || !auth.currentUser) return;
-    const unreadRef = doc(firestore, "chats", chatId, "unreads", auth.currentUser.uid);
+    const unreadRef = doc(
+      firestore,
+      "chats",
+      String(chatId),
+      "unreads",
+      auth.currentUser.uid
+    );
     setDoc(unreadRef, { count: 0 }, { merge: true });
-  }, [chatId, auth.currentUser]);
+  }, [chatId]);
 
-  // À chaque focus (entrée dans l'écran) → on marque comme lu
   useFocusEffect(
     useCallback(() => {
       resetUnread();
     }, [resetUnread])
   );
 
-  // Quand on clique retour, on reset aussi AVANT navigation pour garantir la synchro
   const handleBack = () => {
     resetUnread();
-    setTimeout(() => router.back(), 20); // petit délai pour assurer la propagation
+    setTimeout(() => router.back(), 20);
   };
 
+  // Récup infos chat
   useEffect(() => {
     if (!chatId) return;
-    const ref = doc(firestore, "chats", chatId);
+    const ref = doc(firestore, "chats", String(chatId));
     getDoc(ref).then((snap) => {
-      if (snap.exists()) setChatInfo({ id: snap.id, ...snap.data() });
+      if (snap.exists()) setChatInfo({ id: snap.id, ...(snap.data() as ChatDoc) });
       else setChatInfo(null);
     });
   }, [chatId]);
 
+  // Stream messages
   useEffect(() => {
     if (!chatId) return;
     const q = query(
-      collection(firestore, "chats", chatId, "messages"),
+      collection(firestore, "chats", String(chatId), "messages"),
       orderBy("createdAt", "asc")
     );
     const unsub = onSnapshot(q, (snapshot) => {
       setMessages(
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
+        snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as MessageDoc) }))
       );
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      setTimeout(
+        () => flatListRef.current?.scrollToEnd({ animated: true }),
+        80
+      );
     });
     return unsub;
   }, [chatId]);
@@ -118,30 +134,51 @@ export default function ChatDetailScreen() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !auth.currentUser) return;
+    if (!input.trim() || !auth.currentUser || !chatId) return;
+
     const senderId = auth.currentUser.uid;
-    const message = {
-      text: input,
+    const message: Omit<MessageDoc, "id"> = {
+      content: input.trim(),
       senderId,
+      type: "text",
+      createdAt: serverTimestamp() as any,
       senderName: auth.currentUser.displayName || "Moi",
-      createdAt: serverTimestamp(),
     };
-    await addDoc(collection(firestore, "chats", chatId, "messages"), message);
-    await updateDoc(doc(firestore, "chats", chatId), {
-      lastMessage: input,
+
+    // Ajoute le message
+    await addDoc(
+      collection(firestore, "chats", String(chatId), "messages"),
+      message
+    );
+
+    // Met à jour le doc de chat (aperçu + tri)
+    const chatRef = doc(firestore, "chats", String(chatId));
+    await updateDoc(chatRef, {
+      lastMessage: message.content,
       lastMessageTime: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
+
     setInput("");
 
-    // Incrémente "non lus" pour tous les autres participants
-    const chatDocRef = doc(firestore, "chats", chatId);
-    const chatSnap = await getDoc(chatDocRef);
+    // Incrémente non-lus pour les autres participants
+    const chatSnap = await getDoc(chatRef);
     if (chatSnap.exists()) {
-      const participants = chatSnap.data().participants || [];
+      const participants = (chatSnap.data() as ChatDoc).participants || [];
       for (const uid of participants) {
         if (uid !== senderId) {
-          const unreadRef = doc(firestore, "chats", chatId, "unreads", uid);
-          await setDoc(unreadRef, { count: increment(1) }, { merge: true });
+          const unreadRef = doc(
+            firestore,
+            "chats",
+            String(chatId),
+            "unreads",
+            uid
+          );
+          await setDoc(
+            unreadRef,
+            { count: increment(1) },
+            { merge: true }
+          );
         }
       }
     }
@@ -155,11 +192,17 @@ export default function ChatDetailScreen() {
       style={{ flex: 1 }}
     >
       <SafeAreaView style={{ flex: 1 }}>
-        {/* HEADER style Telegram */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack}>
-            <Ionicons name="arrow-back" size={28} color="#fff" style={{ marginRight: 12 }} />
+            <Ionicons
+              name="arrow-back"
+              size={28}
+              color="#fff"
+              style={{ marginRight: 12 }}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity onPress={navigateToEvent} style={styles.headerUser}>
             <Image source={{ uri: chatAvatar }} style={styles.headerAvatar} />
             <Text style={styles.headerName}>{chatTitle}</Text>
@@ -173,14 +216,15 @@ export default function ChatDetailScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <MessageBubble
-              text={item.text}
+              text={item.content}
               isMine={item.senderId === auth.currentUser?.uid}
               time={
                 item.createdAt?.seconds
-                  ? new Date(item.createdAt.seconds * 1000).toLocaleTimeString().slice(0, 5)
+                  ? new Date(item.createdAt.seconds * 1000)
+                      .toLocaleTimeString()
+                      .slice(0, 5)
                   : ""
               }
-              senderName={item.senderName}
             />
           )}
           contentContainerStyle={styles.messages}
@@ -188,7 +232,9 @@ export default function ChatDetailScreen() {
         />
 
         {/* Input */}
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View style={styles.inputBar}>
             <TextInput
               style={styles.input}
@@ -197,6 +243,7 @@ export default function ChatDetailScreen() {
               placeholderTextColor="#ccc"
               onChangeText={setInput}
               onSubmitEditing={sendMessage}
+              returnKeyType="send"
             />
             <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
               <Ionicons name="send" size={22} color="#fff" />
@@ -235,47 +282,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  bubble: {
-    maxWidth: "75%",
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-    borderRadius: 16,
-  },
-  bubbleMine: {
-    backgroundColor: "#3F8AFF",
-    alignSelf: "flex-end",
-    borderTopRightRadius: 6,
-  },
-  bubbleOther: {
-    backgroundColor: "#262833",
-    alignSelf: "flex-start",
-    borderTopLeftRadius: 6,
-  },
-  bubbleText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  bubbleTime: {
-    color: "#c6c6c6",
-    fontSize: 11,
-    marginTop: 2,
-    alignSelf: "flex-end",
-  },
-  bubbleSystem: {
-    alignSelf: "center",
-    backgroundColor: "#ececec",
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 14,
-  },
-  bubbleSystemText: {
-    color: "#222",
-    fontStyle: "italic",
-    fontSize: 15,
-    textAlign: "center",
   },
   messages: {
     flexGrow: 1,

@@ -13,7 +13,7 @@ export default function ProfileMain() {
   const [loading, setLoading] = useState(true);
 
   const sections = [
-    { label: "Mes informations", icon: "person-outline", route: "/profile/personalInfo" },
+    { label: "Mes informations", icon: "person-outline", route: "/profile/privateProfile" },
     { label: "Paramètres", icon: "settings-outline", route: "/profile/settings" },
     { label: "Sécurité", icon: "lock-closed-outline", route: "/profile/security" },
     { label: "Déconnexion", icon: "exit-outline", route: "/profile/logoutButton", danger: true },

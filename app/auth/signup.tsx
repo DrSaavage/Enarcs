@@ -1,15 +1,16 @@
-// app/auth/signup.tsx
-import { auth } from '@/lib/firebase';
+// Path: app/auth/signup.tsx
+import { auth, firestore } from '@/lib/firebase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); 
+  const [password, setPassword] = useState('');
 
   async function handleSignUp() {
     if (!email.trim() || !password.trim()) {
@@ -18,19 +19,48 @@ export default function SignUpScreen() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.replace('/auth/profileInfo'); // redirection après inscription
+      // 1) Création du compte Auth
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+      // 2) Création/MàJ du doc Firestore users/{uid}
+      const u = cred.user;
+      const userRef = doc(firestore, 'users', u.uid);
+
+      // Petit alias par défaut pour displayName (tu peux mettre '' si tu préfères)
+      const defaultDisplayName = (u.email || email).split('@')[0];
+
+      await setDoc(
+        userRef,
+        {
+          uid: u.uid,
+          displayName: defaultDisplayName, // ou ''
+          email: u.email ?? email,
+          role: 'client',                  // valeur par défaut
+          avatar: '',                      // url vide au début
+          bio: '',
+          phone: '',
+          nationality: '',
+          civility: 'Autre',
+          age: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true } // crée si absent, met à jour sinon
+      );
+
+      // 3) Redirection
+      router.replace('/auth/profileInfo');
     } catch (error: any) {
-      Alert.alert('Erreur', error.message);
+      Alert.alert('Erreur', error?.message || 'Inscription impossible.');
     }
   }
 
   async function handleGuest() {
     try {
       await signInAnonymously(auth);
-      router.replace('/feed'); // invité va directement sur feed
+      router.replace('/feed');
     } catch (e: any) {
-      Alert.alert('Invité indisponible', e.message || 'Impossible de se connecter en invité.');
+      Alert.alert('Invité indisponible', e?.message || 'Impossible de se connecter en invité.');
     }
   }
 
@@ -89,61 +119,14 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 70,
-    left: 20,
-    zIndex: 10,
-  },
-  backArrow: {
-    fontSize: 28,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  content: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 40,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: '#222',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
-    color: 'white',
-  },
-  button: {
-    backgroundColor: 'white',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  link: {
-    color: 'white',
-    marginTop: 10,
-    textDecorationLine: 'underline',
-  },
-  guestText: {
-    marginTop: 16,
-    color: '#D1D5DB',
-    textDecorationLine: 'underline',
-  },
+  container: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, position: 'relative' },
+  backButton: { position: 'absolute', top: 70, left: 20, zIndex: 10 },
+  backArrow: { fontSize: 28, color: 'white', fontWeight: 'bold' },
+  content: { alignItems: 'center' },
+  title: { fontSize: 32, fontWeight: 'bold', color: 'white', marginBottom: 40 },
+  input: { width: '100%', backgroundColor: '#222', padding: 14, borderRadius: 8, marginBottom: 16, color: 'white' },
+  button: { backgroundColor: 'white', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 8, marginBottom: 20 },
+  buttonText: { color: 'black', fontSize: 18, fontWeight: 'bold', textAlign: 'center' },
+  link: { color: 'white', marginTop: 10, textDecorationLine: 'underline' },
+  guestText: { marginTop: 16, color: '#D1D5DB', textDecorationLine: 'underline' },
 });

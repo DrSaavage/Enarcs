@@ -1,57 +1,41 @@
-// types/index.ts
-import { Timestamp } from 'firebase/firestore';
+// Path: types/index.ts
+import { Timestamp } from "firebase/firestore";
 
-export type UserRole = 'influencer' | 'client';
+export type UserRole = "influencer" | "client";
+
+/** Optional: centralize your pricing type so public & private can share it */
+export interface Pricing {
+  dm?: { price?: number };
+  audioCall?: { price?: number; durationMin?: number };
+  videoCall?: { price?: number; durationMin?: number };
+  media?: { pricePerItem?: number };
+  sessions?: {
+    packages?: Array<{ label: string; price: number; includes?: string }>;
+  };
+}
 
 export interface User {
   uid: string;
-  firstName: string;
-  lastName?: string;
+  displayName: string;       // ✅ single source of truth for name
+  email: string;
+
+  avatar?: string;           // URL
+  bio?: string;
+  civility?: "M" | "Mme" | "Autre";
+  phone?: string;
   age?: number;
   nationality?: string;
-  avatar?: string;            // URL
-  bio?: string;
-  civility?: 'M' | 'Mme' | 'Autre';
-  email: string;
-  phone?: string;
-  role: UserRole;             // influencer ou client
+  role: UserRole;
+
+  // (optionnels, utiles côté public)
+  followersCount?: number;
+  postsCount?: number;
+  mediaUrls?: string[];
+  pricing?: Pricing;
+
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
 
-// -----------------------
-
-export interface Post {
-  id: string;
-  authorId: string;           // uid de l’influenceur
-  title?: string;
-  content?: string;           // texte du post
-  mediaUrls?: string[];       // images, vidéos
-  price?: number;             // tarif pour discussion / service
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
-}
-
-// -----------------------
-
-export type ChatType = 'text' | 'audio' | 'video' | 'gift';
-
-export interface Message {
-  id: string;
-  senderId: string;
-  content: string;            // texte ou URL média
-  type: 'text' | 'image' | 'video' | 'gift';
-  createdAt: Timestamp;
-}
-
-export interface Chat {
-  id: string;
-  participants: string[];     // array of user uids (2 for now)
-  postId?: string;            // le post qui a déclenché le chat
-  type: ChatType;
-  accessGranted?: boolean;    // true si le client a payé pour ce chat
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
-  // messages peuvent être une subcollection dans Firestore, sinon tableau
-  messages?: Message[];
-}
+/** Shape tolérante pour lecture/écriture Firestore (doc partiel) */
+export type UserDoc = Partial<User> & { uid: string };

@@ -1,5 +1,6 @@
-// 📄 /app/profile/[userId].tsx
+// Path: app/profile/[userId].tsx
 import { auth, firestore } from "@/lib/firebase";
+import type { Pricing, User } from "@/types"; // ✅ use shared types
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -20,30 +21,7 @@ import {
   View,
 } from "react-native";
 
-type Pricing = {
-  dm?: { price?: number };                        // message privé (texte)
-  audioCall?: { price?: number; durationMin?: number };
-  videoCall?: { price?: number; durationMin?: number };
-  media?: { pricePerItem?: number };              // prix par média
-  sessions?: {                                    // packs de sessions (coaching/mentorat)
-    packages?: Array<{ label: string; price: number; includes?: string }>;
-  };
-};
-
-type PublicUser = {
-  displayName?: string;
-  avatar?: string;
-  bio?: string;
-  age?: number;
-  nationality?: string;
-  civility?: string; // 'M','Mme','Autre'…
-  email?: string;    // afficher avec parcimonie si souhaité
-  role?: "influencer" | "client";
-  followersCount?: number;
-  postsCount?: number;
-  mediaUrls?: string[]; // galerie publique éventuelle
-  pricing?: Pricing;
-};
+type PublicUser = Partial<User>; // tolerant shape for Firestore reads
 
 const FALLBACK_AVATAR = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
 
@@ -67,11 +45,9 @@ export default function PublicProfile() {
         const snap = await getDoc(ref);
         const u = (snap.exists() ? (snap.data() as PublicUser) : null);
 
-        if (mounted) {
-          setUser(u);
-        }
+        if (mounted) setUser(u);
 
-        // Charger quelques médias depuis les posts publics de l’auteur (si tu utilises la collection "posts")
+        // Charger quelques médias depuis les posts publics de l’auteur
         try {
           const postsQ = query(
             collection(firestore, "posts"),
@@ -83,16 +59,13 @@ export default function PublicProfile() {
           const medias: string[] = [];
           postsSnap.forEach((d) => {
             const data = d.data() as any;
-            if (Array.isArray(data.mediaUrls)) {
-              // on pousse uniquement la première image de chaque post pour l’aperçu
-              if (data.mediaUrls[0]) medias.push(data.mediaUrls[0]);
+            if (Array.isArray(data.mediaUrls) && data.mediaUrls[0]) {
+              medias.push(data.mediaUrls[0]);
             }
           });
-          if (mounted) {
-            setLatestMedia(medias);
-          }
+          if (mounted) setLatestMedia(medias);
         } catch {
-          // silencieux
+          // silent
         }
       } finally {
         if (mounted) setLoading(false);
@@ -105,9 +78,14 @@ export default function PublicProfile() {
   }, [userId]);
 
   const avatarUri = useMemo(
-    () => (user?.avatar ? user.avatar : FALLBACK_AVATAR),
+    () => (user?.avatar && String(user.avatar).trim().length > 0 ? String(user.avatar) : FALLBACK_AVATAR),
     [user?.avatar]
   );
+
+  const displayName =
+    (user?.displayName && user.displayName.trim()) ||
+    (user?.email ? user.email.split("@")[0] : "") ||
+    "Profil";
 
   const fmt = (n?: number | null) =>
     typeof n === "number" && !isNaN(n) ? n.toLocaleString("fr-FR") : "—";
@@ -118,45 +96,27 @@ export default function PublicProfile() {
   function requireAuthOrInvite(action: () => void) {
     const u = auth.currentUser;
     if (!u || u.isAnonymous) {
-      Alert.alert(
-        "Connexion requise",
-        "Connecte-toi pour continuer.",
-        [
-          { text: "Annuler", style: "cancel" },
-          { text: "Se connecter", onPress: () => router.push("/auth/login") },
-          { text: "Créer un compte", onPress: () => router.push("/auth/signup") },
-        ]
-      );
+      Alert.alert("Connexion requise", "Connecte-toi pour continuer.", [
+        { text: "Annuler", style: "cancel" },
+        { text: "Se connecter", onPress: () => router.push("/auth/login") },
+        { text: "Créer un compte", onPress: () => router.push("/auth/signup") },
+      ]);
       return;
     }
     action();
   }
 
-  // CTA Handlers (branche plus tard vers ton flow paiement / chat)
+  // CTA (à brancher plus tard)
   const handleStartDM = () =>
-    requireAuthOrInvite(() =>
-      Alert.alert("Message privé", "Ici tu déclencheras l'achat/accès au chat texte (à brancher).")
-    );
-
+    requireAuthOrInvite(() => Alert.alert("Message privé", "Déclenchement achat/accès DM (à brancher)."));
   const handleStartAudio = () =>
-    requireAuthOrInvite(() =>
-      Alert.alert("Appel audio", "Ici tu déclencheras le paiement + création d'un chat audio (à brancher).")
-    );
-
+    requireAuthOrInvite(() => Alert.alert("Appel audio", "Paiement + création chat audio (à brancher)."));
   const handleStartVideo = () =>
-    requireAuthOrInvite(() =>
-      Alert.alert("Appel vidéo", "Ici tu déclencheras le paiement + création d'un chat vidéo (à brancher).")
-    );
-
+    requireAuthOrInvite(() => Alert.alert("Appel vidéo", "Paiement + création chat vidéo (à brancher)."));
   const handleBuyMedia = () =>
-    requireAuthOrInvite(() =>
-      Alert.alert("Médias premium", "Ici tu déclencheras l'achat d'un ou plusieurs médias (à brancher).")
-    );
-
+    requireAuthOrInvite(() => Alert.alert("Médias premium", "Achat média(s) (à brancher)."));
   const handleBuySession = (label: string, price: number) =>
-    requireAuthOrInvite(() =>
-      Alert.alert("Session", `Achat du pack "${label}" (${formatPrice(price)}) (à brancher).`)
-    );
+    requireAuthOrInvite(() => Alert.alert("Session", `Achat du pack "${label}" (${formatPrice(price)}) (à brancher).`));
 
   if (loading) {
     return (
@@ -186,7 +146,7 @@ export default function PublicProfile() {
           </TouchableOpacity>
           <View style={styles.headerUser}>
             <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
-            <Text style={styles.headerName}>{user.displayName || "Profil"}</Text>
+            <Text style={styles.headerName}>{displayName}</Text>
           </View>
         </View>
 
@@ -197,7 +157,7 @@ export default function PublicProfile() {
           </TouchableOpacity>
 
           {/* Nom + meta */}
-          <Text style={styles.profileName}>{user.displayName || "Profil"}</Text>
+          <Text style={styles.profileName}>{displayName}</Text>
           <Text style={styles.profileMeta}>
             {user.civility ? user.civility : ""}
             {!!user.civility && !!user.age ? " • " : ""}
@@ -206,7 +166,11 @@ export default function PublicProfile() {
             {user.nationality ?? ""}
           </Text>
 
-          {user.role ? <View style={styles.badge}><Text style={styles.badgeText}>{user.role}</Text></View> : null}
+          {user.role ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{user.role}</Text>
+            </View>
+          ) : null}
 
           {/* Bio */}
           {user.bio ? <Text style={styles.bio}>{user.bio}</Text> : null}
@@ -239,7 +203,7 @@ export default function PublicProfile() {
             </>
           ) : null}
 
-          {/* Tarifs / Offres (style "OnlyFans-like") */}
+          {/* Offres & Tarifs */}
           <Text style={styles.sectionTitle}>Offres & Tarifs</Text>
           <View style={styles.cards}>
             {/* DM */}
@@ -249,7 +213,7 @@ export default function PublicProfile() {
                 <Text style={styles.cardTitle}>Message privé</Text>
               </View>
               <Text style={styles.cardPrice}>{formatPrice(p?.dm?.price)}</Text>
-              <Text style={styles.cardDesc}>Discuter par écrit avec {user.displayName || "l'auteur"}.</Text>
+              <Text style={styles.cardDesc}>Discuter par écrit avec {displayName}.</Text>
               <TouchableOpacity style={styles.cardCTA} onPress={handleStartDM}>
                 <Text style={styles.cardCTAText}>Envoyer un message</Text>
               </TouchableOpacity>
@@ -314,10 +278,7 @@ export default function PublicProfile() {
                     </View>
                     <View style={{ alignItems: "flex-end" }}>
                       <Text style={styles.sessionPrice}>{formatPrice(pack.price)}</Text>
-                      <TouchableOpacity
-                        style={styles.sessionCTA}
-                        onPress={() => handleBuySession(pack.label, pack.price)}
-                      >
+                      <TouchableOpacity style={styles.sessionCTA} onPress={() => handleBuySession(pack.label, pack.price)}>
                         <Text style={styles.sessionCTAText}>Choisir</Text>
                       </TouchableOpacity>
                     </View>
@@ -353,16 +314,25 @@ const styles = StyleSheet.create({
   },
   headerUser: { flexDirection: "row", alignItems: "center", flex: 1, gap: 10 },
   headerAvatar: {
-    width: 36, height: 36, borderRadius: 18,
-    borderWidth: 2, borderColor: "#fff", backgroundColor: "#d1d1d1",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "#fff",
+    backgroundColor: "#d1d1d1",
   },
   headerName: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 
   content: { padding: 18, paddingBottom: 26, alignItems: "center" },
 
   avatarLarge: {
-    width: 120, height: 120, borderRadius: 60,
-    borderWidth: 3, borderColor: "#fff", marginBottom: 14, backgroundColor: "#eee",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: "#fff",
+    marginBottom: 14,
+    backgroundColor: "#eee",
   },
   profileName: { color: "#fff", fontWeight: "bold", fontSize: 22, marginBottom: 4, textAlign: "center" },
   profileMeta: { color: "#fff", opacity: 0.85, fontSize: 14, marginBottom: 10, textAlign: "center" },
@@ -370,12 +340,7 @@ const styles = StyleSheet.create({
   badgeText: { color: "#fff", fontWeight: "600", fontSize: 12, letterSpacing: 0.3, textTransform: "uppercase" },
   bio: { color: "#ddd", marginTop: 12, fontSize: 15, textAlign: "center" },
 
-  stats: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 18,
-    marginBottom: 8,
-  },
+  stats: { flexDirection: "row", gap: 16, marginTop: 18, marginBottom: 8 },
   statItem: {
     backgroundColor: "rgba(255,255,255,0.07)",
     borderRadius: 12,
@@ -386,48 +351,18 @@ const styles = StyleSheet.create({
   statValue: { color: "#fff", fontSize: 16, fontWeight: "700" },
   statLabel: { color: "#bbb", fontSize: 12, marginTop: 2 },
 
-  sectionTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-    alignSelf: "flex-start",
-    marginTop: 18,
-    marginBottom: 10,
-  },
+  sectionTitle: { color: "#fff", fontSize: 18, fontWeight: "700", alignSelf: "flex-start", marginTop: 18, marginBottom: 10 },
 
-  mediaGrid: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  },
-  mediaItem: {
-    width: "31.6%",
-    aspectRatio: 1,
-    borderRadius: 10,
-    backgroundColor: "#222",
-  },
+  mediaGrid: { width: "100%", flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
+  mediaItem: { width: "31.6%", aspectRatio: 1, borderRadius: 10, backgroundColor: "#222" },
 
-  cards: {
-    width: "100%",
-    gap: 12,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.07)",
-    borderRadius: 16,
-    padding: 14,
-  },
+  cards: { width: "100%", gap: 12 },
+  card: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   cardTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   cardPrice: { color: "#fff", fontWeight: "800", fontSize: 18, marginVertical: 4 },
   cardDesc: { color: "#cfcfcf", fontSize: 13, marginBottom: 10 },
-  cardCTA: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
+  cardCTA: { backgroundColor: "#fff", borderRadius: 10, paddingVertical: 10, alignItems: "center" },
   cardCTAText: { color: "#000", fontWeight: "700" },
 
   sessionRow: {
@@ -441,13 +376,7 @@ const styles = StyleSheet.create({
   sessionTitle: { color: "#fff", fontWeight: "700", fontSize: 15 },
   sessionDesc: { color: "#cfcfcf", fontSize: 13, marginTop: 2 },
   sessionPrice: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  sessionCTA: {
-    marginTop: 6,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
+  sessionCTA: { marginTop: 6, backgroundColor: "#fff", borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
   sessionCTAText: { color: "#000", fontWeight: "700" },
 
   photoModalBg: {

@@ -40,7 +40,7 @@ export function useFavorites() {
     });
 
     return unsubscribe;
-  }, [userId]);
+  }, [publicProfile]);
 
   // Toggle favorite for both user and event document
   const toggleFavorite = useCallback(
